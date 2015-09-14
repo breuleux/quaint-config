@@ -1,0 +1,77 @@
+
+require:
+   quaint ->
+      create as qcreate, tools
+   quaint-earlgrey
+   quaint-highlight
+   .hleg -> install as install-hleg
+   .hlliso -> install as install-hlliso
+
+provide:
+   create
+
+
+create{options, fn = null} =
+
+   siteurl = options.hostname
+   siteroot = options.root
+
+   q = qcreate with
+
+      quaint-earlgrey{sandbox = global}
+
+      quaint-highlight{
+         default = options.default-language
+         install-plugins{hljs} =
+            install-hleg{hljs}
+            install-hlliso{hljs}
+      }
+
+      {@} ->
+
+         @register-macros with {
+            ornate{engine, pattern >> pattern.raw{}, body} =
+               div.ornate %
+                  pattern each
+                     "+" -> engine.gen{body}
+                     letter ->
+                        div % class = 'deco{letter}'
+         }
+
+         @register-rule with {
+
+            ;; Dropcap
+            "$$$ \\lead"{engine, {=> lead}} =
+               text = lead.raw{}
+               {.lead % text[0], text.slice{1}}
+
+            ;; Intra-url
+            "\\label @@@ \\url"{engine, {=> label, => url}} =
+               a %
+                  href = siteroot +
+                     match url.raw{}:
+                        R"\."? x -> x
+                        x -> x + options.default-extension
+                  engine.gen{label}
+
+            ;; Image
+            "\\maybe\\label @@@ image : \\url"{engine, {=> label, => url}} =
+               img %
+                  src = options.assets-root +
+                     match url.raw{}:
+                        R"\."? x -> x
+                        x -> x + options.default-image-extension
+                  alt = engine.gen{label}
+         }
+
+         @setenv with {
+            = siteroot
+            = siteurl
+            site = {
+               hostname = options.hostname
+               root = options.root
+            }
+         }
+
+   if fn: fn{q}
+   q
