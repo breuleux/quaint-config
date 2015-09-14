@@ -1,17 +1,18 @@
 
 require:
    quaint ->
-      create as qcreate, tools
+      create as qcreate, tools, SeqDocument
    quaint-earlgrey
    quaint-highlight
    .hleg -> install as install-hleg
    .hlliso -> install as install-hlliso
+   urlencode
 
 provide:
    create
 
 
-create{options, fn = null} =
+create{options} =
 
    siteurl = options.hostname
    siteroot = options.root
@@ -28,14 +29,96 @@ create{options, fn = null} =
       }
 
       {@} ->
+         @register-document with {
+            resources = SeqDocument{}
+         }
 
          @register-macros with {
+
+            share{engine, type} =
+               m = engine.documents.meta
+               eurl = urlencode{options.hostname + engine.eval{.url, {=}}}
+               etitle = urlencode{m.get{.title}??.raw{} or ""}
+               edescr = urlencode with
+                  m.get{.tagline}??.raw{}.replace{R.g"\n *|.$", " "}.trim{} or ""
+               lnk{t, title, href} =
+                  a.share %
+                     href = href
+                     title = title
+                     target = "_blank"
+                     img % src = '{options.assets-root}social_icons/{t}.png'
+               match type.raw{}:
+                  .facebook ->
+                     lnk{.Facebook, "Share on Facebook"} with
+                        'https://www.facebook.com/sharer/sharer.php?u={eurl}&t={etitle}'
+                  .twitter ->
+                     lnk{.Twitter, "Tweet"} with
+                        'https://twitter.com/intent/tweet?text={etitle}:%20{eurl}'
+                  "google+" ->
+                     lnk{"Google+", "Share on Google+"} with
+                        'https://plus.google.com/share?url={eurl}'
+                  .reddit ->
+                     lnk{.Reddit, "Submit to Reddit"} with
+                        'http://www.reddit.com/submit?url={eurl}&title={etitle}'
+                  .email ->
+                     lnk{.Email, "E-mail"} with
+                        'mailto:?subject={etitle}&body={edescr}:%20{eurl}'
+               
+
             ornate{engine, pattern >> pattern.raw{}, body} =
                div.ornate %
                   pattern each
                      "+" -> engine.gen{body}
                      letter ->
                         div % class = 'deco{letter}'
+
+            resources{engine, body} =
+               match body.raw{}:
+                  "!run!" ->
+                     genfrom %
+                        generate{path, docs} =
+                           docs.resources.entries{} each
+                              R"(.*)!$"! {_, name} when name != "system" ->
+                                 script % '''
+                                    System.import("{siteroot}lib/{name}.js").then(function(x)\{
+                                       if(x.main) x.main();
+                                    \})
+                                 '''
+                  "!dump!" ->
+                     genfrom %
+                        generate{path, docs} =
+                           var system = false
+                           docs.resources.entries{} each
+                              "" -> ""
+                              R".css$"? lnk ->
+                                 link %
+                                    rel = "stylesheet"
+                                    type = "text/css"
+                                    href = siteroot +
+                                       if lnk[0]=="/":
+                                          then: lnk.slice{1}
+                                          else: "style/" + lnk
+                              R".js$"? script ->
+                                 script %
+                                    src = siteroot +
+                                       if script[0]=="/":
+                                          then: script.slice{1}
+                                          else: "lib/" + script
+                              R"!$"? or "system" ->
+                                 if not system:
+                                    system = true
+                                    {
+                                       script % src = '{siteroot}lib/jspm_packages/system.js'
+                                       script % src = '{siteroot}lib/config.js'
+                                    }
+                              other ->
+                                 print 'Warning: "{other}" is not a valid resource.'
+                  else ->
+                     enumerate{body.raw{}.split{R"[\n ,]+"}} each
+                        {i, resource} when resource ->
+                           genfor %
+                              document = .resources
+                              resource
          }
 
          @register-rule with {
@@ -73,5 +156,5 @@ create{options, fn = null} =
             }
          }
 
-   if fn: fn{q}
+   options.customize??{q}
    q
