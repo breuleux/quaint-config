@@ -14,10 +14,12 @@
   "dependencies": {
     "earlgrey-runtime": ">=0.0.10",
     "quaint": ">=0.0.3",
+    "quaint-earlgrey": ">=0.0.0",
+    "quaint-highlight": ">=0.0.0",
     "urlencode": "^1.1.0"
   },
   "devDependencies": {
-    "earlgrey": ">=0.0.11",
+    "earlgrey": ">=0.0.12",
     "mocha": "^2.2.1",
     "earl-mocha": ">=0.0.2"
   },
