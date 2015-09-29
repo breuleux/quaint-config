@@ -29,7 +29,7 @@ create{options} =
       }
 
       {@} ->
-         @register-document with {
+         @register-documents with {
             resources = SeqDocument{}
          }
 
@@ -79,8 +79,13 @@ create{options} =
                         generate{path, docs} =
                            docs.resources.entries{} each
                               R"(.*)!$"! {_, name} when name != "system" ->
+                                 ;; script % '''
+                                 ;;    System.import("{siteroot}lib/{name}.js").then(function(x)\{
+                                 ;;       if(x.main) x.main();
+                                 ;;    \})
+                                 ;; '''
                                  script % '''
-                                    System.import("{siteroot}lib/{name}.js").then(function(x)\{
+                                    System.import("{name}").then(function(x)\{
                                        if(x.main) x.main();
                                     \})
                                  '''
@@ -94,16 +99,25 @@ create{options} =
                                  link %
                                     rel = "stylesheet"
                                     type = "text/css"
-                                    href = siteroot +
-                                       if lnk[0]=="/":
-                                          then: lnk.slice{1}
-                                          else: "style/" + lnk
+                                    href = match lnk:
+                                       R"//"? -> lnk
+                                       R"^/"? -> siteroot + lnk.slice{1}
+                                       else -> siteroot + "style/" + lnk
+                                    ;; href =
+                                    ;;    siteroot +
+                                    ;;       if lnk[0]=="/":
+                                    ;;          then: lnk.slice{1}
+                                    ;;          else: "style/" + lnk
                               R".js$"? script ->
                                  script %
-                                    src = siteroot +
-                                       if script[0]=="/":
-                                          then: script.slice{1}
-                                          else: "lib/" + script
+                                    src = match script:
+                                       R"//"? -> script
+                                       R"^/"? -> siteroot + script.slice{1}
+                                       else -> siteroot + "lib/" + script
+                                    ;; src = siteroot +
+                                    ;;    if script[0]=="/":
+                                    ;;       then: script.slice{1}
+                                    ;;       else: "lib/" + script
                               R"!$"? or "system" ->
                                  if not system:
                                     system = true
@@ -121,7 +135,7 @@ create{options} =
                               resource
          }
 
-         @register-rule with {
+         @register-rules with {
 
             ;; Dropcap
             "$$$ \\lead"{engine, {=> lead}} =
