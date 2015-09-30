@@ -14,8 +14,8 @@
   "dependencies": {
     "earlgrey-runtime": ">=0.0.11",
     "quaint": ">=0.0.8",
-    "quaint-earlgrey": ">=0.0.0",
-    "quaint-highlight": ">=0.0.2",
+    "quaint-earlgrey": ">=0.0.1",
+    "quaint-highlight": ">=0.0.3",
     "urlencode": "^1.1.0"
   },
   "devDependencies": {

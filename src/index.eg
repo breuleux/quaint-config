@@ -75,64 +75,47 @@ create{options} =
             resources{engine, body} =
                match body.raw{}:
                   "!run!" ->
-                     genfrom %
-                        generate{path, docs} =
-                           docs.resources.entries{} each
-                              R"(.*)!$"! {_, name} when name != "system" ->
-                                 ;; script % '''
-                                 ;;    System.import("{siteroot}lib/{name}.js").then(function(x)\{
-                                 ;;       if(x.main) x.main();
-                                 ;;    \})
-                                 ;; '''
-                                 script % '''
-                                    System.import("{name}").then(function(x)\{
-                                       if(x.main) x.main();
-                                    \})
-                                 '''
+                     engine.deferred with {path, docs} ->
+                        docs.resources.entries{} each
+                           R"(.*)!$"! {_, name} when name != "system" ->
+                              script % '''
+                                 System.import("{name}").then(function(x)\{
+                                    if(x.main) x.main();
+                                 \})
+                              '''
+
                   "!dump!" ->
-                     genfrom %
-                        generate{path, docs} =
-                           var system = false
-                           docs.resources.entries{} each
-                              "" -> ""
-                              R".css$"? lnk ->
-                                 link %
-                                    rel = "stylesheet"
-                                    type = "text/css"
-                                    href = match lnk:
-                                       R"//"? -> lnk
-                                       R"^/"? -> siteroot + lnk.slice{1}
-                                       else -> siteroot + "style/" + lnk
-                                    ;; href =
-                                    ;;    siteroot +
-                                    ;;       if lnk[0]=="/":
-                                    ;;          then: lnk.slice{1}
-                                    ;;          else: "style/" + lnk
-                              R".js$"? script ->
-                                 script %
-                                    src = match script:
-                                       R"//"? -> script
-                                       R"^/"? -> siteroot + script.slice{1}
-                                       else -> siteroot + "lib/" + script
-                                    ;; src = siteroot +
-                                    ;;    if script[0]=="/":
-                                    ;;       then: script.slice{1}
-                                    ;;       else: "lib/" + script
-                              R"!$"? or "system" ->
-                                 if not system:
-                                    system = true
-                                    {
-                                       script % src = '{siteroot}lib/jspm_packages/system.js'
-                                       script % src = '{siteroot}lib/config.js'
-                                    }
-                              other ->
-                                 print 'Warning: "{other}" is not a valid resource.'
+                     engine.deferred with {path, docs} ->
+                        var system = false
+                        docs.resources.entries{} each
+                           "" -> ""
+                           R".css$"? lnk ->
+                              link %
+                                 rel = "stylesheet"
+                                 type = "text/css"
+                                 href = match lnk:
+                                    R"//"? -> lnk
+                                    R"^/"? -> siteroot + lnk.slice{1}
+                                    else -> siteroot + "style/" + lnk
+                           R".js$"? script ->
+                              script %
+                                 src = match script:
+                                    R"//"? -> script
+                                    R"^/"? -> siteroot + script.slice{1}
+                                    else -> siteroot + "lib/" + script
+                           R"!$"? or "system" ->
+                              if not system:
+                                 system = true
+                                 {
+                                    script % src = '{siteroot}lib/jspm_packages/system.js'
+                                    script % src = '{siteroot}lib/config.js'
+                                 }
+                           other ->
+                              print 'Warning: "{other}" is not a valid resource.'
                   else ->
                      enumerate{body.raw{}.split{R"[\n ,]+"}} each
                         {i, resource} when resource ->
-                           genfor %
-                              document = .resources
-                              resource
+                           engine.into{.resources, resource}
          }
 
          @register-rules with {
