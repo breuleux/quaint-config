@@ -123,7 +123,7 @@ create{options} =
             ;; Dropcap
             "$$$ \\lead"{engine, {=> lead}} =
                text = lead.raw{}
-               {.lead % text[0], text.slice{1}}
+               {span.lead % text[0], text.slice{1}}
 
             ;; Intra-url
             "\\label @@@ \\url"{engine, {=> label, => url}} =
@@ -142,7 +142,19 @@ create{options} =
                         R"\."? x -> x
                         x -> x + options.default-image-extension
                   alt = engine.gen{label}
+
+            ;; Dialogues
+            "\\maybe\\character >> \\text"{engine, {=> text}} =
+               {'“', engine.gen{text}, '”'}
+            "<< \\text"{engine, {=> text}} =
+               {'”', engine.gen{text}, '“'}
+
          }
+
+         @register-postprocessor{R"“”", ""}
+         @register-postprocessor{R"( +)”", "”$1"}
+         @register-postprocessor{R"“( +)", "$1“"}
+         @register-postprocessor{R" *-- *", "—"}
 
          @setenv with {
             = siteroot
